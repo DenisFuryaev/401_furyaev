@@ -6,6 +6,11 @@ using System.Drawing;
 using System.IO;
 using YOLOv4MLNet.DataStructures;
 using static Microsoft.ML.Transforms.Image.ImageResizingEstimator;
+using System.Threading.Tasks.Dataflow;
+using System.Collections.Concurrent;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace YOLOv4MLNet
 {
@@ -19,7 +24,6 @@ namespace YOLOv4MLNet
         //const string imageFolder = @"Assets\Images";
 
         const string imageOutputFolder = @"..\..\..\..\Assets\Output";
-
         static readonly string[] classesNames = new string[] { "person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train",
             "truck", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse",
             "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
@@ -28,8 +32,9 @@ namespace YOLOv4MLNet
             "carrot", "hot dog", "pizza", "donut", "cake", "chair", "sofa", "pottedplant", "bed", "diningtable", "toilet", "tvmonitor",
             "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book",
             "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush" };
+        static ConcurrentBag<YoloV4Result> modelOutput = new ConcurrentBag<YoloV4Result>();
 
-        public static List<YoloV4Result> MakePredictios(string imageFolder)
+        static async void TaskMethod(string imageFolder)
         {
             Directory.CreateDirectory(imageOutputFolder);
             MLContext mlContext = new MLContext();
@@ -63,48 +68,82 @@ namespace YOLOv4MLNet
             // Create prediction engine
             var predictionEngine = mlContext.Model.CreatePredictionEngine<YoloV4BitmapData, YoloV4Prediction>(model);
 
-            List<YoloV4Result> modelOutput = new List<YoloV4Result>();
+           
             string[] fileEntries = Directory.GetFiles(Path.GetFullPath(imageFolder));
-            foreach (string imagePath in fileEntries)
+
+            var actionBlock = new ActionBlock<string>(async imagePath =>
             {
                 Console.WriteLine($"processing file {Path.GetFileName(imagePath)}");
-                using (var bitmap = new Bitmap(Image.FromFile(imagePath)))
-                {
-                    // predict
-                    var predict = predictionEngine.Predict(new YoloV4BitmapData() { Image = bitmap });
-                    var results = predict.GetResults(classesNames, 0.3f, 0.7f);
+                using var bitmap = new Bitmap(Image.FromFile(imagePath));
+                var predict = predictionEngine.Predict(new YoloV4BitmapData() { Image = bitmap });
+                var results = predict.GetResults(classesNames, 0.3f, 0.7f);
 
-                    foreach (YoloV4Result res in results)
-                    {
-                        modelOutput.Add(res);
-                    }
+                foreach (YoloV4Result res in results)
+                    modelOutput.Add(res);
 
 
-                    //using (var g = Graphics.FromImage(bitmap))
-                    //{
-                    //    foreach (var res in results)
-                    //    {
-                    //        // draw predictions
-                    //        var x1 = res.BBox[0];
-                    //        var y1 = res.BBox[1];
-                    //        var x2 = res.BBox[2];
-                    //        var y2 = res.BBox[3];
-                    //        g.DrawRectangle(Pens.Red, x1, y1, x2 - x1, y2 - y1);
-                    //        using (var brushes = new SolidBrush(Color.FromArgb(50, Color.Red)))
-                    //        {
-                    //            g.FillRectangle(brushes, x1, y1, x2 - x1, y2 - y1);
-                    //        }
-                    //
-                    //        g.DrawString(res.Label + " " + res.Confidence.ToString("0.00"),
-                    //                     new Font("Arial", 12), Brushes.Blue, new PointF(x1, y1));
-                    //    }
-                    //    bitmap.Save(Path.Combine(imageOutputFolder, Path.ChangeExtension(imageName, "_processed" + Path.GetExtension(imageName))));
-                    //}
-                    
-                }
-            }
+            }, new ExecutionDataflowBlockOptions
+            {
+                MaxDegreeOfParallelism = DataflowBlockOptions.Unbounded
+            });
 
-            return modelOutput;
+            foreach (string imagePath in fileEntries)
+                actionBlock.Post(imagePath);
+
+            actionBlock.Complete();
+            //actionBlock.Completion.Wait();
+            await actionBlock.Completion;
+        }
+
+        public static List<YoloV4Result> MakePredictios(string imageFolder)
+        {
+
+
+            TaskMethod(imageFolder);
+
+            //foreach (string imagePath in fileEntries)
+            //{
+            //    Console.WriteLine($"processing file {Path.GetFileName(imagePath)}");
+            //    using (var bitmap = new Bitmap(Image.FromFile(imagePath)))
+            //    {
+            //        // predict
+            //        var predict = predictionEngine.Predict(new YoloV4BitmapData() { Image = bitmap });
+            //        var results = predict.GetResults(classesNames, 0.3f, 0.7f);
+            //
+            //        foreach (YoloV4Result res in results)
+            //        {
+            //            modelOutput.Add(res);
+            //        }
+            //
+            //        
+            //    }
+            //}
+
+            return modelOutput.ToList();
         }
     }
 }
+
+
+
+
+//using (var g = Graphics.FromImage(bitmap))
+//{
+//    foreach (var res in results)
+//    {
+//        // draw predictions
+//        var x1 = res.BBox[0];
+//        var y1 = res.BBox[1];
+//        var x2 = res.BBox[2];
+//        var y2 = res.BBox[3];
+//        g.DrawRectangle(Pens.Red, x1, y1, x2 - x1, y2 - y1);
+//        using (var brushes = new SolidBrush(Color.FromArgb(50, Color.Red)))
+//        {
+//            g.FillRectangle(brushes, x1, y1, x2 - x1, y2 - y1);
+//        }
+//
+//        g.DrawString(res.Label + " " + res.Confidence.ToString("0.00"),
+//                     new Font("Arial", 12), Brushes.Blue, new PointF(x1, y1));
+//    }
+//    bitmap.Save(Path.Combine(imageOutputFolder, Path.ChangeExtension(imageName, "_processed" + Path.GetExtension(imageName))));
+//}

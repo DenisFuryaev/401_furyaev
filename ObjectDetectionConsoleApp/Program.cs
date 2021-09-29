@@ -19,22 +19,20 @@ namespace YOLOv4MLNet
         {
             var sw = new Stopwatch();
             sw.Start();
-
+            
             modelOutput = Predictor.MakePredictios(imageFolder);
             Console.WriteLine();
-
+            
             foreach (YoloV4Result entry in modelOutput)           
                 if (modelDictOutput.ContainsKey(entry.Label))
                     modelDictOutput[entry.Label] += 1;
                 else
                     modelDictOutput.Add(entry.Label, 1);
-
             foreach (KeyValuePair<string, int> entry in modelDictOutput)
             {
                 Console.WriteLine($"    {entry.Value} {entry.Key}(s)");
             }
             
-
             sw.Stop();
             Console.WriteLine($"\nDone in {sw.ElapsedMilliseconds}ms.");
         }
