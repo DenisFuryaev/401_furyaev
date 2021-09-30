@@ -2,6 +2,9 @@
 Лабораторная работа <br />
 **Фуряев Денис 401 группа ВМК**
 
+:heavy_exclamation_mark: Для работы консольного приложения необходимо поместить файл с обученной моделью <br />(.onnx файл можно скачать тут: https://github.com/onnx/models/tree/master/vision/object_detection_segmentation/yolov4) <br /> в папку ObjectDetectionLib\assets\model 
+ :heavy_exclamation_mark:
+
 Необходимо обнаружить все известные объекты на изображениях, находящихся в некоторой директории на диске.  
 
 **Критерий выполнения:**  <br />
