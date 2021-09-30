@@ -1,7 +1,6 @@
 ﻿using Microsoft.ML;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using YOLOv4MLNet.DataStructures;
@@ -9,21 +8,15 @@ using static Microsoft.ML.Transforms.Image.ImageResizingEstimator;
 using System.Threading.Tasks.Dataflow;
 using System.Collections.Concurrent;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace YOLOv4MLNet
 {
-    //https://towardsdatascience.com/yolo-v4-optimal-speed-accuracy-for-object-detection-79896ed47b50
     public class Predictor
     {
         // model is available here:
         // https://github.com/onnx/models/tree/master/vision/object_detection_segmentation/yolov4
         const string modelPath = @"C:\Users\denis\Downloads\YOLOv4MLNet-master\yolov4.onnx";
 
-        //const string imageFolder = @"Assets\Images";
-
-        const string imageOutputFolder = @"..\..\..\..\Assets\Output";
         static readonly string[] classesNames = new string[] { "person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train",
             "truck", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse",
             "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
@@ -32,14 +25,12 @@ namespace YOLOv4MLNet
             "carrot", "hot dog", "pizza", "donut", "cake", "chair", "sofa", "pottedplant", "bed", "diningtable", "toilet", "tvmonitor",
             "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book",
             "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush" };
-        static ConcurrentBag<YoloV4Result> modelOutput = new ConcurrentBag<YoloV4Result>();
+        private static readonly ConcurrentBag<YoloV4Result> modelOutput = new ConcurrentBag<YoloV4Result>();
 
-        static async void TaskMethod(string imageFolder)
+        public static List<YoloV4Result> MakePredictions(string imageFolder)
         {
-            Directory.CreateDirectory(imageOutputFolder);
+            
             MLContext mlContext = new MLContext();
-
-            // Define scoring pipeline
             var pipeline = mlContext.Transforms.ResizeImages(inputColumnName: "bitmap", outputColumnName: "input_1:0", imageWidth: 416, imageHeight: 416, resizing: ResizingKind.IsoPad)
                 .Append(mlContext.Transforms.ExtractPixels(outputColumnName: "input_1:0", scaleImage: 1f / 255f, interleavePixelColors: true))
                 .Append(mlContext.Transforms.ApplyOnnxModel(
@@ -61,63 +52,35 @@ namespace YOLOv4MLNet
                         "Identity_2:0"
                     },
                     modelFile: modelPath, recursionLimit: 100));
-
-            // Fit on empty list to obtain input data schema
             var model = pipeline.Fit(mlContext.Data.LoadFromEnumerable(new List<YoloV4BitmapData>()));
-
-            // Create prediction engine
             var predictionEngine = mlContext.Model.CreatePredictionEngine<YoloV4BitmapData, YoloV4Prediction>(model);
 
-           
-            string[] fileEntries = Directory.GetFiles(Path.GetFullPath(imageFolder));
 
-            var actionBlock = new ActionBlock<string>(async imagePath =>
+            string[] fileEntries = Directory.GetFiles(imageFolder);
+
+            var actionBlock = new ActionBlock<string>(imagePath =>
             {
                 Console.WriteLine($"processing file {Path.GetFileName(imagePath)}");
                 using var bitmap = new Bitmap(Image.FromFile(imagePath));
                 var predict = predictionEngine.Predict(new YoloV4BitmapData() { Image = bitmap });
+
                 var results = predict.GetResults(classesNames, 0.3f, 0.7f);
 
                 foreach (YoloV4Result res in results)
                     modelOutput.Add(res);
-
+                
 
             }, new ExecutionDataflowBlockOptions
             {
-                MaxDegreeOfParallelism = DataflowBlockOptions.Unbounded
+                MaxDegreeOfParallelism = 1
             });
 
             foreach (string imagePath in fileEntries)
                 actionBlock.Post(imagePath);
 
             actionBlock.Complete();
-            //actionBlock.Completion.Wait();
-            await actionBlock.Completion;
-        }
-
-        public static List<YoloV4Result> MakePredictios(string imageFolder)
-        {
-
-
-            TaskMethod(imageFolder);
-
-            //foreach (string imagePath in fileEntries)
-            //{
-            //    Console.WriteLine($"processing file {Path.GetFileName(imagePath)}");
-            //    using (var bitmap = new Bitmap(Image.FromFile(imagePath)))
-            //    {
-            //        // predict
-            //        var predict = predictionEngine.Predict(new YoloV4BitmapData() { Image = bitmap });
-            //        var results = predict.GetResults(classesNames, 0.3f, 0.7f);
-            //
-            //        foreach (YoloV4Result res in results)
-            //        {
-            //            modelOutput.Add(res);
-            //        }
-            //
-            //        
-            //    }
-            //}
+            actionBlock.Completion.Wait();
+            
 
             return modelOutput.ToList();
         }
@@ -125,6 +88,25 @@ namespace YOLOv4MLNet
 }
 
 
+
+
+//foreach (string imagePath in fileEntries)
+//{
+//    Console.WriteLine($"processing file {Path.GetFileName(imagePath)}");
+//    using (var bitmap = new Bitmap(Image.FromFile(imagePath)))
+//    {
+//        // predict
+//        var predict = predictionEngine.Predict(new YoloV4BitmapData() { Image = bitmap });
+//        var results = predict.GetResults(classesNames, 0.3f, 0.7f);
+//
+//        foreach (YoloV4Result res in results)
+//        {
+//            modelOutput.Add(res);
+//        }
+//
+//        
+//    }
+//}
 
 
 //using (var g = Graphics.FromImage(bitmap))
