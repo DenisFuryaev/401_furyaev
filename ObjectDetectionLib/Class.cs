@@ -25,7 +25,7 @@ namespace YOLOv4MLNet
             "carrot", "hot dog", "pizza", "donut", "cake", "chair", "sofa", "pottedplant", "bed", "diningtable", "toilet", "tvmonitor",
             "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book",
             "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush" };
-        private static readonly ConcurrentBag<YoloV4Result> modelOutput = new ConcurrentBag<YoloV4Result>();
+        private static ConcurrentBag<YoloV4Result> modelOutput = new ConcurrentBag<YoloV4Result>();
 
         public static List<YoloV4Result> MakePredictions(string imageFolder)
         {
@@ -53,13 +53,11 @@ namespace YOLOv4MLNet
                     },
                     modelFile: modelPath, recursionLimit: 100));
             var model = pipeline.Fit(mlContext.Data.LoadFromEnumerable(new List<YoloV4BitmapData>()));
-            var predictionEngine = mlContext.Model.CreatePredictionEngine<YoloV4BitmapData, YoloV4Prediction>(model);
-
-
             string[] fileEntries = Directory.GetFiles(imageFolder);
 
             var actionBlock = new ActionBlock<string>(imagePath =>
             {
+                var predictionEngine = mlContext.Model.CreatePredictionEngine<YoloV4BitmapData, YoloV4Prediction>(model);
                 Console.WriteLine($"processing file {Path.GetFileName(imagePath)}");
                 using var bitmap = new Bitmap(Image.FromFile(imagePath));
                 var predict = predictionEngine.Predict(new YoloV4BitmapData() { Image = bitmap });
@@ -68,11 +66,10 @@ namespace YOLOv4MLNet
 
                 foreach (YoloV4Result res in results)
                     modelOutput.Add(res);
-                
 
             }, new ExecutionDataflowBlockOptions
             {
-                MaxDegreeOfParallelism = 1
+                MaxDegreeOfParallelism = 2
             });
 
             foreach (string imagePath in fileEntries)
@@ -80,7 +77,6 @@ namespace YOLOv4MLNet
 
             actionBlock.Complete();
             actionBlock.Completion.Wait();
-            
 
             return modelOutput.ToList();
         }
