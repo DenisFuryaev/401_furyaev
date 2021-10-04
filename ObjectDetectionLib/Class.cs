@@ -8,6 +8,7 @@ using static Microsoft.ML.Transforms.Image.ImageResizingEstimator;
 using System.Threading.Tasks.Dataflow;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Threading;
 
 namespace YOLOv4MLNet
 {
@@ -26,10 +27,13 @@ namespace YOLOv4MLNet
             "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book",
             "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush" };
         private static ConcurrentBag<YoloV4Result> modelOutput = new ConcurrentBag<YoloV4Result>();
+        public delegate void BarHandler(string message);
+        static public event BarHandler Notify;
+        public static int imagesCount;
 
         public static List<YoloV4Result> MakePredictions(string imageFolder)
         {
-            
+            imagesCount = Directory.GetFiles(imageFolder, "*", SearchOption.TopDirectoryOnly).Length;
             MLContext mlContext = new MLContext();
             var pipeline = mlContext.Transforms.ResizeImages(inputColumnName: "bitmap", outputColumnName: "input_1:0", imageWidth: 416, imageHeight: 416, resizing: ResizingKind.IsoPad)
                 .Append(mlContext.Transforms.ExtractPixels(outputColumnName: "input_1:0", scaleImage: 1f / 255f, interleavePixelColors: true))
@@ -57,11 +61,11 @@ namespace YOLOv4MLNet
 
             var actionBlock = new ActionBlock<string>(imagePath =>
             {
+                Notify?.Invoke(imagePath);
+
                 var predictionEngine = mlContext.Model.CreatePredictionEngine<YoloV4BitmapData, YoloV4Prediction>(model);
-                Console.WriteLine($"processing file {Path.GetFileName(imagePath)}");
                 using var bitmap = new Bitmap(Image.FromFile(imagePath));
                 var predict = predictionEngine.Predict(new YoloV4BitmapData() { Image = bitmap });
-
                 var results = predict.GetResults(classesNames, 0.3f, 0.7f);
 
                 foreach (YoloV4Result res in results)
@@ -76,10 +80,12 @@ namespace YOLOv4MLNet
                 actionBlock.Post(imagePath);
 
             actionBlock.Complete();
+           
             actionBlock.Completion.Wait();
-
             return modelOutput.ToList();
         }
+
+        
     }
 }
 
