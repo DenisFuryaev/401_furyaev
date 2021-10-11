@@ -13,7 +13,7 @@ namespace YOLOv4MLNet
         private static List<YoloV4Result> modelOutput;
         private static readonly Dictionary<string, int> modelDictOutput = new Dictionary<string, int>();
         static int imagesProcessed = 0;
-
+        static Object myLocker = new Object();
 
 
         static void Main()
@@ -49,12 +49,15 @@ namespace YOLOv4MLNet
         }
         private static void DisplayMessage(string message, List<YoloV4Result> objectsList)
         {
-            imagesProcessed++;
-            int progress = (int)((float)imagesProcessed / Predictor.imagesCount * 100);
-            Console.Write($"    {(int)progress} % {Path.GetFileName(message)} : ");
-            foreach (YoloV4Result detectedObject in objectsList)
-                Console.Write($"{detectedObject.Label}, ");
-            Console.WriteLine();
+            lock (myLocker)
+            {
+                imagesProcessed++;
+                int progress = (int)((float)imagesProcessed / Predictor.imagesCount * 100);
+                Console.Write($"    {(int)progress} % {Path.GetFileName(message)} : ");
+                foreach (YoloV4Result detectedObject in objectsList)
+                    Console.Write($"{detectedObject.Label}, ");
+                Console.WriteLine();
+            }
         }
     }
 }

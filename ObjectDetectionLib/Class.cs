@@ -16,7 +16,7 @@ namespace YOLOv4MLNet
     public class Predictor
     {
         // model is available here: https://github.com/onnx/models/tree/master/vision/object_detection_segmentation/yolov4
-        const string modelPath = @"C:\Users\denis\Downloads\YOLOv4MLNet-master\yolov4.onnx";
+        private static string modelPath = Path.GetFullPath(@"..\..\..\..\ObjectDetectionLib\assets\model\yolov4.onnx");
 
         static readonly string[] classesNames = new string[] { "person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train",
             "truck", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse",
@@ -64,28 +64,30 @@ namespace YOLOv4MLNet
 
             var actionBlock = new ActionBlock<string>(imagePath =>
             {
-                List<YoloV4Result> objectsList = new List<YoloV4Result>();
+                ConcurrentBag<YoloV4Result> objectsBag = new ConcurrentBag<YoloV4Result>();
                 var predictionEngine = mlContext.Model.CreatePredictionEngine<YoloV4BitmapData, YoloV4Prediction>(model);
                 using var bitmap = new Bitmap(Image.FromFile(imagePath));
                 var predict = predictionEngine.Predict(new YoloV4BitmapData() { Image = bitmap });
                 var results = predict.GetResults(classesNames, 0.3f, 0.7f);
 
-                Parallel.ForEach(results, new ParallelOptions { CancellationToken = token }, res => { modelOutput.Add(res); objectsList.Add(res); });
+                foreach (YoloV4Result res in results)
+                {
+                    modelOutput.Add(res); 
+                    objectsBag.Add(res);
+                }
 
-                Notify?.Invoke(imagePath, objectsList);
+                Notify?.Invoke(imagePath, objectsBag.ToList());
 
-                objectsList.Clear();
+                objectsBag.Clear();
 
             }, new ExecutionDataflowBlockOptions
             {
                 MaxDegreeOfParallelism = threadCount
             });
 
-            foreach (string imagePath in fileEntries)
-                actionBlock.Post(imagePath);
+            Parallel.ForEach(fileEntries, new ParallelOptions { CancellationToken = token }, imagePath => { actionBlock.Post(imagePath); });
 
             actionBlock.Complete();
-           
             actionBlock.Completion.Wait();
             return modelOutput.ToList();
         }
