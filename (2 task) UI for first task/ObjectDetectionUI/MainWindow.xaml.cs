@@ -6,32 +6,54 @@ using YOLOv4MLNet.DataStructures;
 using YOLOv4MLNet;
 using System.IO;
 using System.Threading;
+using System.Drawing;
+using System.Windows.Media.Imaging;
+using System.Collections.ObjectModel;
+using System.Windows.Data;
 
 namespace ObjectDetectionUI
 {
     public partial class MainWindow : Window
     {
         public List<YoloV4Result> modelOutput { get; set; }
+        public ObservableCollection<string> processedFiles { get; set; }
         static object myLocker = new object();
 
         public MainWindow()
         {
-            modelOutput = new List<YoloV4Result>();
+
             InitializeComponent();
+            modelOutput = new List<YoloV4Result>();
+            processedFiles = new ObservableCollection<string>();
+
             Predictor.Notify += DisplayMessage;
+            ProcessedFilesListBox.SelectionChanged += ProcessedFilesListBox_SelectionChanged;
 
             MainListBox.ItemsSource = modelOutput;
+            ProcessedFilesListBox.ItemsSource = processedFiles;
+        }
 
+        private void ProcessedFilesListBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            try
+            {
+                SelectedImage.Source = new BitmapImage(new Uri((string)ProcessedFilesListBox.SelectedItem));
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(exception.Message);
+            }
         }
 
         private void OpenMenuItemClicked(object sender, RoutedEventArgs e)
         {
-            modelOutput = new List<YoloV4Result>();
-            ProcessedFilesTextBlock.Items.Clear();
+            modelOutput.Clear();
+            processedFiles.Clear();
+
             System.Windows.Forms.FolderBrowserDialog openFileDlg = new System.Windows.Forms.FolderBrowserDialog();
             openFileDlg.ShowDialog();
             string folderPath = openFileDlg.SelectedPath;
-            SelectedFolderTextBlock.Text = folderPath;
+            SelectedFolderListBox.Text = folderPath;
             if (!string.IsNullOrEmpty(folderPath))
             {
                 var t = new Thread(() =>
@@ -47,9 +69,8 @@ namespace ObjectDetectionUI
         private void DisplayMessage(string message, List<YoloV4Result> objectsList)
         {
             lock (myLocker)
-            {
-                //MessageBox.Show(message);
-                Dispatcher.Invoke(new Action(() => { ProcessedFilesTextBlock.Items.Add(System.IO.Path.GetFileName(message)); }));
+            {          
+                Dispatcher.Invoke(new Action(() => { processedFiles.Add(message); }));
             }
         }
 
@@ -60,10 +81,7 @@ namespace ObjectDetectionUI
 
         private void AbortButtonClicked(object sender, RoutedEventArgs e)
         {
-            
-            SelectedFolderTextBlock.Text = "Abort is in process";
-            MainListBox.ItemsSource = null;
-            MainListBox.ItemsSource = modelOutput;
+            SelectedFolderListBox.Text = "Abort is in process";
         }
     }
 }

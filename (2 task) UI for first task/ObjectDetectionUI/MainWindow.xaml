@@ -7,12 +7,20 @@
         DataContext="{Binding RelativeSource={RelativeSource Self}}"
         mc:Ignorable="d"
         Title="MainWindow" Height="620" Width="1100">
+    
+    
+    <Window.Resources>
+        
+    </Window.Resources>
+    
+    
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="25"/>
             <RowDefinition Height="50"/>
             <RowDefinition Height="50"/>
-            <RowDefinition/>
+            <RowDefinition Height="283*"/>
+            <RowDefinition Height="196*"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="120"/>
@@ -27,12 +35,17 @@
                 <MenuItem Header="_Open" Click="OpenMenuItemClicked" />
             </MenuItem>
         </Menu>
-        
-        <Button Content="Select Folder" FontSize="16" Click="SelectFolderButtonClicked" HorizontalAlignment="Left" Margin="10,0,0,0" Grid.Row="1" VerticalAlignment="Center" RenderTransformOrigin="-2.156,-0.69" Width="100" Height="26" Background="#FFD6E1FF"/>
-        <Button Content="Abort" FontSize="16" Click="AbortButtonClicked" HorizontalAlignment="Left" Margin="10,0,0,0" Grid.Row="2" VerticalAlignment="Center" RenderTransformOrigin="-2.156,-0.69" Width="100" Height="26" Background="#FFF3C5C5"/>
-        <ListBox x:Name="MainListBox" ItemsSource="{Binding modelOutput}" Margin="10" Grid.Column="1" Grid.Row="2" Grid.RowSpan="2"/>
-        <ListBox x:Name="ProcessedFilesTextBlock" Margin="10" Grid.Column="2" Grid.Row="2" Grid.RowSpan="2"/>
-        <TextBox x:Name="SelectedFolderTextBlock" Text="Selected folder path will be displayed here" FontSize="16" Grid.Column="1" HorizontalAlignment="Left" Margin="10,0,0,0" Grid.Row="1" TextWrapping="Wrap" VerticalAlignment="Center"  RenderTransformOrigin="0.504,0.44" Grid.ColumnSpan="2"/>
+
+        <TextBox x:Name="SelectedFolderListBox" FontSize="16" Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="3" TextWrapping="Wrap" Margin="10" Text="Selected folder path will be displayed here"  VerticalAlignment="Center"  RenderTransformOrigin="0.504,0.44"/>
+
+        <Button Content="Select Folder" FontSize="16" Click="SelectFolderButtonClicked" HorizontalAlignment="Center" Grid.Row="1" VerticalAlignment="Center" RenderTransformOrigin="-2.156,-0.69" Width="100" Height="26" Background="#FFD6E1FF"/>
+        <Button Content="Abort" FontSize="16" Click="AbortButtonClicked" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center" RenderTransformOrigin="-2.156,-0.69" Width="100" Height="26" Background="#FFF3C5C5"/>
+
+        <ListBox x:Name="MainListBox"  Margin="10,10,10,10" Grid.Column="2" Grid.Row="2" Grid.RowSpan="3"/>
+        <ListBox x:Name="ProcessedFilesListBox"  Margin="10" Grid.Column="1" Grid.Row="2" Grid.RowSpan="2"/>
+        <ListBox x:Name="ListBox" Margin="10,10,10,10" Grid.Column="3" Grid.Row="2" Grid.RowSpan="3"/>
+
+        <Image x:Name="SelectedImage" Grid.Row="4" Grid.Column="1" Margin="10"/>
     </Grid>
 </Window>
    
