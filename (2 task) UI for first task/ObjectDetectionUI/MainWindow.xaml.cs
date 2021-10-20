@@ -14,6 +14,7 @@ using System.Linq;
 using System.Collections.Specialized;
 using System.Collections;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace ObjectDetectionUI
 {
@@ -77,7 +78,6 @@ namespace ObjectDetectionUI
             foreach(string obj in detectedObjects.Keys)
             {
                 yield return obj;
-                // detectedObjects[obj].Item1.ToString() + " " + obj + "(s)" 
             }
         }
 
@@ -94,14 +94,6 @@ namespace ObjectDetectionUI
         private static object myLocker = new object();
         private Thread t;
 
-
-        private void PredictorEventHandler(string message, List<YoloV4Result> objectsList)
-        {
-            lock (myLocker)
-            {
-                Dispatcher.Invoke(new Action(() => { objectsDict.Add(objectsList, message); processedFiles.Add(message); }));
-            }
-        }
         public MainWindow()
         {
             InitializeComponent();
@@ -115,10 +107,20 @@ namespace ObjectDetectionUI
             ProcessedFilesListBox.ItemsSource = processedFiles;
             ObjectsListBox.ItemsSource = objectsDict;
         }
+        private void PredictorEventHandler(string filePath, List<YoloV4Result> objectsList)
+        {
+            lock (myLocker)
+            {
+                Dispatcher.Invoke(new Action(() => { objectsDict.Add(objectsList, filePath); processedFiles.Add(Path.GetFileName(filePath)); }));
+            }
+        }
 
 
         private void ObjectsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (ObjectsListBox.SelectedItem == null)
+                return;
+
             // draw all images with "selected object"
             ImageListBox.Items.Clear();
             foreach (string filename in objectsDict.detectedObjects[(string)ObjectsListBox.SelectedItem].dict.Keys)
@@ -165,9 +167,12 @@ namespace ObjectDetectionUI
         }
         private void ProcessedFilesListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (ProcessedFilesListBox.SelectedItem == null)
+                return;
+
             try
             {
-                SelectedImage.Source = new BitmapImage(new Uri((string)ProcessedFilesListBox.SelectedItem));
+                SelectedImage.Source = new BitmapImage(new Uri(SelectedFolderListBox.Text + "\\" + ProcessedFilesListBox.SelectedItem.ToString()));
             }
             catch (Exception exception)
             {
@@ -180,6 +185,7 @@ namespace ObjectDetectionUI
         {
             processedFiles.Clear();
             objectsDict.Clear();
+            Predictor.cancellationTokenSource = new CancellationTokenSource();
         }
         private void OpenMenu_ItemClicked(object sender, RoutedEventArgs e)
         {
@@ -195,17 +201,19 @@ namespace ObjectDetectionUI
                 {
                     try
                     {
+                        Dispatcher.Invoke(new Action(() => { InfoButton.Background = new SolidColorBrush(Colors.Salmon); }));
+                        Dispatcher.Invoke(new Action(() => { InfoButtonTextBlock.Text = "Busy"; }));
                         Predictor.MakePredictions(folderPath);
+                        Dispatcher.Invoke(new Action(() => { InfoButton.Background = new SolidColorBrush(Colors.LightGreen); }));
+                        Dispatcher.Invoke(new Action(() => { InfoButtonTextBlock.Text = "Done"; }));
                     }
-                    catch (ThreadInterruptedException exc)
+                    catch (Exception exc)
                     {
-                        Predictor.cancelTokenSource.Cancel();
-                        MessageBox.Show(exc.Message);
+                        //MessageBox.Show(exc.Message);
                     }
                 });
                 t.Start();
             }
-            
         }
 
 
@@ -215,8 +223,10 @@ namespace ObjectDetectionUI
         }
         private void Abort_ButtonClicked(object sender, RoutedEventArgs e)
         {
-            SelectedFolderListBox.Text = "Abort is in process";
-            //t.Interrupt();
+            InfoButtonTextBlock.Text = "Abort!";
+            InfoButton.Background = new SolidColorBrush(Colors.OrangeRed);
+            Predictor.cancellationTokenSource.Cancel();
         }
     }
 }
+    

@@ -7,13 +7,13 @@
         DataContext="{Binding RelativeSource={RelativeSource Self}}"
         mc:Ignorable="d"
         Title="MainWindow" Height="620" Width="1100">
-    
-    
+
+
     <Window.Resources>
-        
+
     </Window.Resources>
-    
-    
+
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="25"/>
@@ -36,7 +36,7 @@
             </MenuItem>
         </Menu>
 
-        <TextBox x:Name="SelectedFolderListBox" FontSize="16" Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="3" TextWrapping="Wrap" Margin="10" Text="Selected folder path will be displayed here"  VerticalAlignment="Center"  RenderTransformOrigin="0.504,0.44"/>
+        <TextBox x:Name="SelectedFolderListBox" FontSize="16" Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="3" IsReadOnly = "True" TextWrapping="Wrap" Margin="10" Text="Selected folder path will be displayed here"  VerticalAlignment="Center"  RenderTransformOrigin="0.504,0.44"/>
 
         <Button Content="Select Folder" FontSize="16" Click="SelectFolder_ButtonClicked" HorizontalAlignment="Center" Grid.Row="1" VerticalAlignment="Center" RenderTransformOrigin="-2.156,-0.69" Width="100" Height="26" Background="#FFD6E1FF"/>
         <Button Content="Abort" FontSize="16" Click="Abort_ButtonClicked" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center" RenderTransformOrigin="-2.156,-0.69" Width="100" Height="26" Background="#FFF3C5C5"/>
@@ -47,6 +47,9 @@
         <ListBox x:Name="ObjectsImagesListBox"  Margin="10" Grid.Column="2" Grid.Row="2" Grid.RowSpan="3"/>
 
         <Image x:Name="SelectedImage" Grid.Row="4" Grid.Column="1" Margin="10"/>
+        <Button x:Name="InfoButton" Background="LightGreen" Margin="10" HorizontalAlignment="Center" Grid.Row="4" Width="100" Height="80" VerticalAlignment="Center" >
+            <TextBlock x:Name="InfoButtonTextBlock" FontWeight="Bold" FontSize="13" TextWrapping="Wrap">Press button [Select Folder]  to start object detection</TextBlock>
+        </Button>
     </Grid>
 </Window>
    

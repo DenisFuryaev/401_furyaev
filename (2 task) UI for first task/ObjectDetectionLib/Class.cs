@@ -30,8 +30,7 @@ namespace YOLOv4MLNet
         public delegate void BarHandler(string fileName, List<YoloV4Result> objectsList);
         static public event BarHandler Notify;
         public static int imagesCount;
-        public static CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
-        private static readonly CancellationToken token = cancelTokenSource.Token;
+        public static CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
         public static List<YoloV4Result> MakePredictions(string imageFolder, int threadCount = 1)
         {
@@ -61,8 +60,8 @@ namespace YOLOv4MLNet
                     modelFile: modelPath, recursionLimit: 100));
             var model = pipeline.Fit(mlContext.Data.LoadFromEnumerable(new List<YoloV4BitmapData>()));
             string[] fileEntries = Directory.GetFiles(imageFolder);
-            
 
+           
             var actionBlock = new ActionBlock<string>(imagePath =>
             {
                 ConcurrentBag<YoloV4Result> objectsBag = new ConcurrentBag<YoloV4Result>();
@@ -83,15 +82,24 @@ namespace YOLOv4MLNet
 
             }, new ExecutionDataflowBlockOptions
             {
+                CancellationToken = cancellationTokenSource.Token,
                 MaxDegreeOfParallelism = threadCount
             });
 
 
-            Parallel.ForEach(fileEntries, new ParallelOptions { CancellationToken = token }, imagePath => { actionBlock.Post(imagePath); });
-
+            Parallel.ForEach(fileEntries, imagePath => { actionBlock.Post(imagePath); });
 
             actionBlock.Complete();
-            actionBlock.Completion.Wait();
+
+            try
+            {
+                actionBlock.Completion.Wait();
+            }
+            catch(Exception e)
+            {
+                throw e;
+            }
+
             return modelOutput.ToList();
         }
 
