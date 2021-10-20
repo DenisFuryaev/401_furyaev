@@ -1,4 +1,4 @@
-# Object Detection with concurrency
+# UI for Object Detection
 Лабораторная работа <br />
 **Фуряев Денис 401 группа ВМК**
 
