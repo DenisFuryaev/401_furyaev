@@ -33,7 +33,7 @@ namespace YOLOv4MLNet
         public static CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
         private static readonly CancellationToken token = cancelTokenSource.Token;
 
-        public static List<YoloV4Result> MakePredictions(string imageFolder, int threadCount = 2)
+        public static List<YoloV4Result> MakePredictions(string imageFolder, int threadCount = 1)
         {
             modelOutput = new ConcurrentBag<YoloV4Result>();
             imagesCount = Directory.GetFiles(imageFolder, "*", SearchOption.TopDirectoryOnly).Length;
@@ -86,14 +86,15 @@ namespace YOLOv4MLNet
                 MaxDegreeOfParallelism = threadCount
             });
 
+
             Parallel.ForEach(fileEntries, new ParallelOptions { CancellationToken = token }, imagePath => { actionBlock.Post(imagePath); });
+
 
             actionBlock.Complete();
             actionBlock.Completion.Wait();
             return modelOutput.ToList();
         }
 
-        
     }
 }
 

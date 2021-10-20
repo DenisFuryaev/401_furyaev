@@ -32,18 +32,19 @@
 
         <Menu Grid.Row="0" Grid.ColumnSpan="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=ColumnDefinitions.Count, Mode=OneWay}" FontSize="16">
             <MenuItem Header="_Folder">
-                <MenuItem Header="_Open" Click="OpenMenuItemClicked" />
+                <MenuItem Header="_Open" Click="OpenMenu_ItemClicked" />
             </MenuItem>
         </Menu>
 
         <TextBox x:Name="SelectedFolderListBox" FontSize="16" Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="3" TextWrapping="Wrap" Margin="10" Text="Selected folder path will be displayed here"  VerticalAlignment="Center"  RenderTransformOrigin="0.504,0.44"/>
 
-        <Button Content="Select Folder" FontSize="16" Click="SelectFolderButtonClicked" HorizontalAlignment="Center" Grid.Row="1" VerticalAlignment="Center" RenderTransformOrigin="-2.156,-0.69" Width="100" Height="26" Background="#FFD6E1FF"/>
-        <Button Content="Abort" FontSize="16" Click="AbortButtonClicked" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center" RenderTransformOrigin="-2.156,-0.69" Width="100" Height="26" Background="#FFF3C5C5"/>
+        <Button Content="Select Folder" FontSize="16" Click="SelectFolder_ButtonClicked" HorizontalAlignment="Center" Grid.Row="1" VerticalAlignment="Center" RenderTransformOrigin="-2.156,-0.69" Width="100" Height="26" Background="#FFD6E1FF"/>
+        <Button Content="Abort" FontSize="16" Click="Abort_ButtonClicked" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center" RenderTransformOrigin="-2.156,-0.69" Width="100" Height="26" Background="#FFF3C5C5"/>
 
-        <ListBox x:Name="MainListBox"  Margin="10,10,10,10" Grid.Column="2" Grid.Row="2" Grid.RowSpan="3"/>
         <ListBox x:Name="ProcessedFilesListBox"  Margin="10" Grid.Column="1" Grid.Row="2" Grid.RowSpan="2"/>
-        <ListBox x:Name="ListBox" Margin="10,10,10,10" Grid.Column="3" Grid.Row="2" Grid.RowSpan="3"/>
+        <ListBox x:Name="ObjectsListBox" Margin="10" Grid.Column="3" Grid.Row="2" Grid.RowSpan="2"/>
+        <ListBox x:Name="ImageListBox" Margin="10" Grid.Column="3" Grid.Row="4" IsEnabled="True"/>
+        <ListBox x:Name="ObjectsImagesListBox"  Margin="10" Grid.Column="2" Grid.Row="2" Grid.RowSpan="3"/>
 
         <Image x:Name="SelectedImage" Grid.Row="4" Grid.Column="1" Margin="10"/>
     </Grid>
