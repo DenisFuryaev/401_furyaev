@@ -1,5 +1,4 @@
 ﻿using Microsoft.ML;
-using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -16,7 +15,7 @@ namespace YOLOv4MLNet
     public class Predictor
     {
         // model is available here: https://github.com/onnx/models/tree/master/vision/object_detection_segmentation/yolov4
-        private static string modelPath = Path.GetFullPath(@"..\..\..\..\ObjectDetectionLib\assets\model\yolov4.onnx");
+        private static readonly string modelPath = Path.GetFullPath(@"..\..\..\..\..\ObjectDetectionLib\ObjectDetectionLib\assets\model\yolov4.onnx");
 
         static readonly string[] classesNames = new string[] { "person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train",
             "truck", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse",
@@ -90,15 +89,7 @@ namespace YOLOv4MLNet
             Parallel.ForEach(fileEntries, imagePath => { actionBlock.Post(imagePath); });
 
             actionBlock.Complete();
-
-            try
-            {
-                actionBlock.Completion.Wait();
-            }
-            catch(Exception e)
-            {
-                throw e;
-            }
+            actionBlock.Completion.Wait();
 
             return modelOutput.ToList();
         }

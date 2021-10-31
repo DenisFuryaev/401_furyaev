@@ -1,1 +1,0 @@
-put yolov4 model here and make sure that is model file name is "yolov4.onnx"

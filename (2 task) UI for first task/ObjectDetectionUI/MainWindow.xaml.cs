@@ -6,11 +6,8 @@ using YOLOv4MLNet.DataStructures;
 using YOLOv4MLNet;
 using System.IO;
 using System.Threading;
-using System.Drawing;
 using System.Windows.Media.Imaging;
 using System.Collections.ObjectModel;
-using System.Windows.Data;
-using System.Linq;
 using System.Collections.Specialized;
 using System.Collections;
 using System.Windows.Controls;
@@ -18,56 +15,55 @@ using System.Windows.Media;
 
 namespace ObjectDetectionUI
 {
-
     public class ObjectsData : IEnumerable<string>, INotifyCollectionChanged
     {
         public class Value
         {
-            public int count { get; set; }
-            public Dictionary<string, List<float[]>> dict { get; set; }
+            public int Count { get; set; }
+            public Dictionary<string, List<float[]>> Dict { get; set; }
 
             public Value(int count, Dictionary<string, List<float[]>> dict)
             {
-                this.count = count;
-                this.dict = dict;
+                this.Count = count;
+                this.Dict = dict;
             }
         }
 
         // dictionary data structure: <object_name, <count, list<files, list<boundaries>>>>
-        public Dictionary<string, Value> detectedObjects { get; set; }
+        public Dictionary<string, Value> DetectedObjects { get; set; }
 
         public event NotifyCollectionChangedEventHandler CollectionChanged;
 
         public ObjectsData()
         {
-            detectedObjects = new Dictionary<string, Value>();
+            DetectedObjects = new Dictionary<string, Value>();
             CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
         public void Clear()
         {
-            detectedObjects.Clear();
+            DetectedObjects.Clear();
             CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
         public void Add(List<YoloV4Result> objectsList, string fileName)
         {
             foreach (YoloV4Result obj in objectsList)
-                if (detectedObjects.ContainsKey(obj.Label)) // outer dictionary already has this object
-                    if (detectedObjects[obj.Label].dict.ContainsKey(fileName)) // inner dictionary already has such filename
+                if (DetectedObjects.ContainsKey(obj.Label)) // outer dictionary already has this object
+                    if (DetectedObjects[obj.Label].Dict.ContainsKey(fileName)) // inner dictionary already has such filename
                     {
-                        detectedObjects[obj.Label].count += 1;
-                        detectedObjects[obj.Label].dict[fileName].Add(obj.BBox);
+                        DetectedObjects[obj.Label].Count += 1;
+                        DetectedObjects[obj.Label].Dict[fileName].Add(obj.BBox);
                     }
                     else
                     {
-                        detectedObjects[obj.Label].count += 1;
-                        detectedObjects[obj.Label].dict.Add(fileName, new List<float[]>{ obj.BBox });
+                        DetectedObjects[obj.Label].Count += 1;
+                        DetectedObjects[obj.Label].Dict.Add(fileName, new List<float[]>{ obj.BBox });
                     }
 
                 else // outer dictionary doesn't have this object
                 {
-                    detectedObjects.Add(obj.Label, new Value(1, new Dictionary<string, List<float[]>> { { fileName, new List<float[]>{ obj.BBox } } }));
+                    DetectedObjects.Add(obj.Label, new Value(1, new Dictionary<string, List<float[]>> { { fileName, new List<float[]>{ obj.BBox } } }));
                 }
 
             CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -75,7 +71,7 @@ namespace ObjectDetectionUI
 
         public IEnumerator<string> GetEnumerator()
         {
-            foreach(string obj in detectedObjects.Keys)
+            foreach(string obj in DetectedObjects.Keys)
             {
                 yield return obj;
             }
@@ -89,32 +85,30 @@ namespace ObjectDetectionUI
 
     public partial class MainWindow : Window
     {
-        public ObservableCollection<string> processedFiles { get; set; }
+        public ObservableCollection<string> ProcessedFiles { get; set; }
         public ObjectsData objectsDict;
-        private static object myLocker = new object();
-        private Thread t;
+        private static readonly object myLocker = new object();
 
         public MainWindow()
         {
             InitializeComponent();
-            processedFiles = new ObservableCollection<string>();
+            ProcessedFiles = new ObservableCollection<string>();
             objectsDict = new ObjectsData();
 
             Predictor.Notify += PredictorEventHandler;
             ProcessedFilesListBox.SelectionChanged += ProcessedFilesListBox_SelectionChanged;
             ObjectsListBox.SelectionChanged += ObjectsListBox_SelectionChanged;
 
-            ProcessedFilesListBox.ItemsSource = processedFiles;
+            ProcessedFilesListBox.ItemsSource = ProcessedFiles;
             ObjectsListBox.ItemsSource = objectsDict;
         }
         private void PredictorEventHandler(string filePath, List<YoloV4Result> objectsList)
         {
             lock (myLocker)
             {
-                Dispatcher.Invoke(new Action(() => { objectsDict.Add(objectsList, filePath); processedFiles.Add(Path.GetFileName(filePath)); }));
+                Dispatcher.Invoke(new Action(() => { objectsDict.Add(objectsList, filePath); ProcessedFiles.Add(Path.GetFileName(filePath)); }));
             }
         }
-
 
         private void ObjectsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -123,7 +117,7 @@ namespace ObjectDetectionUI
 
             // draw all images with "selected object"
             ImageListBox.Items.Clear();
-            foreach (string filename in objectsDict.detectedObjects[(string)ObjectsListBox.SelectedItem].dict.Keys)
+            foreach (string filename in objectsDict.DetectedObjects[(string)ObjectsListBox.SelectedItem].Dict.Keys)
             {
                 System.Windows.Controls.Image myLocalImage = new System.Windows.Controls.Image();
                 myLocalImage.Height = 200;
@@ -140,9 +134,9 @@ namespace ObjectDetectionUI
 
             // draw all objects that Predictor Class has labled with "selected object"
             ObjectsImagesListBox.Items.Clear();
-            foreach (string filename in objectsDict.detectedObjects[(string)ObjectsListBox.SelectedItem].dict.Keys)
+            foreach (string filename in objectsDict.DetectedObjects[(string)ObjectsListBox.SelectedItem].Dict.Keys)
             {
-                foreach (float[] box in objectsDict.detectedObjects[(string)ObjectsListBox.SelectedItem].dict[filename])
+                foreach (float[] box in objectsDict.DetectedObjects[(string)ObjectsListBox.SelectedItem].Dict[filename])
                 {
                     int x1 = (int)box[0];
                     int y1 = (int)box[1];
@@ -180,10 +174,9 @@ namespace ObjectDetectionUI
             }
         }
 
-
         public void ClearAll()
         {
-            processedFiles.Clear();
+            ProcessedFiles.Clear();
             objectsDict.Clear();
             Predictor.cancellationTokenSource = new CancellationTokenSource();
         }
@@ -197,25 +190,21 @@ namespace ObjectDetectionUI
             SelectedFolderListBox.Text = folderPath;
             if (!string.IsNullOrEmpty(folderPath))
             {
-                t = new Thread(() =>
+                Task t = Task.Factory.StartNew(() =>
                 {
                     try
                     {
-                        Dispatcher.Invoke(new Action(() => { InfoButton.Background = new SolidColorBrush(Colors.Salmon); }));
-                        Dispatcher.Invoke(new Action(() => { InfoButtonTextBlock.Text = "Busy"; }));
-                        Predictor.MakePredictions(folderPath);
-                        Dispatcher.Invoke(new Action(() => { InfoButton.Background = new SolidColorBrush(Colors.LightGreen); }));
-                        Dispatcher.Invoke(new Action(() => { InfoButtonTextBlock.Text = "Done"; }));
+                        _ = Dispatcher.BeginInvoke(new Action(() => { InfoButton.Background = new SolidColorBrush(Colors.Salmon); InfoButtonTextBlock.Text = "Busy"; }));
+                        _ = Predictor.MakePredictions(folderPath);
+                        _ = Dispatcher.BeginInvoke(new Action(() => { InfoButton.Background = new SolidColorBrush(Colors.LightGreen); InfoButtonTextBlock.Text = "Done"; }));
                     }
                     catch (Exception exc)
                     {
-                        //MessageBox.Show(exc.Message);
+                        Console.Error.WriteLine(exc.Message);
                     }
                 });
-                t.Start();
             }
         }
-
 
         private void SelectFolder_ButtonClicked(object sender, RoutedEventArgs e)
         {

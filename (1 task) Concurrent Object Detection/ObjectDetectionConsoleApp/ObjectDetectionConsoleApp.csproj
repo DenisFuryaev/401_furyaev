@@ -13,7 +13,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ObjectDetectionLib\ObjectDetectionLib.csproj" />
+    <Reference Include="ObjectDetectionLib">
+      <HintPath>..\..\ObjectDetectionLib\ObjectDetectionLib\bin\Debug\netcoreapp3.1\ObjectDetectionLib.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

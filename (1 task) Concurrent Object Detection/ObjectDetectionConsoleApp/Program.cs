@@ -3,13 +3,12 @@ using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using YOLOv4MLNet.DataStructures;
-using System.Threading;
 
 namespace YOLOv4MLNet
 {
     class Program
     {
-        private const string imageFolder = @"..\..\..\..\ObjectDetectionLib\assets\images";
+        private const string imageFolder = @"..\..\..\images";
         private static List<YoloV4Result> modelOutput;
         private static readonly Dictionary<string, int> modelDictOutput = new Dictionary<string, int>();
         static int imagesProcessed = 0;
@@ -23,10 +22,12 @@ namespace YOLOv4MLNet
             Predictor.Notify += DisplayMessage;
             Console.CancelKeyPress += new ConsoleCancelEventHandler(MyHandler);
 
+
             var sw = new Stopwatch();
             sw.Start();
 
             modelOutput = Predictor.MakePredictions(Path.GetFullPath(imageFolder));
+
             Console.WriteLine($"\n Objects found in images from folder {Path.GetFullPath(imageFolder)}:");
 
             foreach (YoloV4Result entry in modelOutput)           
@@ -44,8 +45,7 @@ namespace YOLOv4MLNet
         protected static void MyHandler(object sender, ConsoleCancelEventArgs args)
         {
             Console.WriteLine("\nStopping all threads and exiting program");
-            Predictor.cancelTokenSource.Cancel();
-            System.Environment.Exit(0);
+            Predictor.cancellationTokenSource.Cancel();
         }
         private static void DisplayMessage(string message, List<YoloV4Result> objectsList)
         {
