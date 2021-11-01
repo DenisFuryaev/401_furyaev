@@ -24,5 +24,6 @@
             Label = label;
             Confidence = confidence;
         }
+
     }
 }

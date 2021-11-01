@@ -1,5 +1,4 @@
 ﻿using Microsoft.ML;
-using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -16,7 +15,7 @@ namespace YOLOv4MLNet
     public class Predictor
     {
         // model is available here: https://github.com/onnx/models/tree/master/vision/object_detection_segmentation/yolov4
-        private static string modelPath = Path.GetFullPath(@"..\..\..\..\ObjectDetectionLib\assets\model\yolov4.onnx");
+        private static readonly string modelPath = Path.GetFullPath(@"..\..\..\..\..\ObjectDetectionLib\ObjectDetectionLib\assets\model\yolov4.onnx");
 
         static readonly string[] classesNames = new string[] { "person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train",
             "truck", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse",
@@ -26,15 +25,15 @@ namespace YOLOv4MLNet
             "carrot", "hot dog", "pizza", "donut", "cake", "chair", "sofa", "pottedplant", "bed", "diningtable", "toilet", "tvmonitor",
             "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book",
             "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush" };
-        private static ConcurrentBag<YoloV4Result> modelOutput = new ConcurrentBag<YoloV4Result>();
+        private static ConcurrentBag<YoloV4Result> modelOutput;
         public delegate void BarHandler(string fileName, List<YoloV4Result> objectsList);
         static public event BarHandler Notify;
         public static int imagesCount;
-        public static CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
-        private static readonly CancellationToken token = cancelTokenSource.Token;
+        public static CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
-        public static List<YoloV4Result> MakePredictions(string imageFolder, int threadCount = 2)
+        public static List<YoloV4Result> MakePredictions(string imageFolder, int threadCount = 1)
         {
+            modelOutput = new ConcurrentBag<YoloV4Result>();
             imagesCount = Directory.GetFiles(imageFolder, "*", SearchOption.TopDirectoryOnly).Length;
             MLContext mlContext = new MLContext();
             var pipeline = mlContext.Transforms.ResizeImages(inputColumnName: "bitmap", outputColumnName: "input_1:0", imageWidth: 416, imageHeight: 416, resizing: ResizingKind.IsoPad)
@@ -60,8 +59,8 @@ namespace YOLOv4MLNet
                     modelFile: modelPath, recursionLimit: 100));
             var model = pipeline.Fit(mlContext.Data.LoadFromEnumerable(new List<YoloV4BitmapData>()));
             string[] fileEntries = Directory.GetFiles(imageFolder);
-            
 
+           
             var actionBlock = new ActionBlock<string>(imagePath =>
             {
                 ConcurrentBag<YoloV4Result> objectsBag = new ConcurrentBag<YoloV4Result>();
@@ -82,17 +81,19 @@ namespace YOLOv4MLNet
 
             }, new ExecutionDataflowBlockOptions
             {
+                CancellationToken = cancellationTokenSource.Token,
                 MaxDegreeOfParallelism = threadCount
             });
 
-            Parallel.ForEach(fileEntries, new ParallelOptions { CancellationToken = token }, imagePath => { actionBlock.Post(imagePath); });
+
+            Parallel.ForEach(fileEntries, imagePath => { actionBlock.Post(imagePath); });
 
             actionBlock.Complete();
             actionBlock.Completion.Wait();
+
             return modelOutput.ToList();
         }
 
-        
     }
 }
 

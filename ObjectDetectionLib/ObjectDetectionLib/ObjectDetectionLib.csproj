@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
@@ -13,7 +12,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ObjectDetectionLib\ObjectDetectionLib.csproj" />
+    <Reference Include="ObjectDetectionLib">
+      <HintPath>bin\Debug\netcoreapp3.1\ObjectDetectionLib.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

@@ -1,7 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 
   <PropertyGroup>
+    <OutputType>WinExe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UseWPF>true</UseWPF>
+	<UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -9,6 +12,12 @@
     <PackageReference Include="Microsoft.ML.ImageAnalytics" Version="1.6.0" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.9.0" />
     <PackageReference Include="Microsoft.ML.OnnxTransformer" Version="1.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="ObjectDetectionLib">
+      <HintPath>..\..\ObjectDetectionLib\ObjectDetectionLib\bin\Debug\netcoreapp3.1\ObjectDetectionLib.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

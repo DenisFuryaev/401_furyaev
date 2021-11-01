@@ -4,6 +4,7 @@
 # DenisFuryaev git ignores
 /.vs
 *.onnx
+.vs/
 
 # User-specific files
 *.suo
