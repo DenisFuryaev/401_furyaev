@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using YOLOv4MLNet.DataStructures;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace YOLOv4MLNet
 {
@@ -13,7 +11,10 @@ namespace YOLOv4MLNet
     {
         public int ImageObjectId { get; set; }
         public string Label { get; set; }
-        public string FileName { get; set; }
+        public int X { get; set; }
+        public int Y { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
     }
 
     class ObjectContext : DbContext
@@ -54,15 +55,14 @@ namespace YOLOv4MLNet
 
             modelOutput = Predictor.MakePredictions(Path.GetFullPath(imageFolder));
 
-            Console.WriteLine($"\n Objects found in images from folder {Path.GetFullPath(imageFolder)}:");
-
-            foreach (YoloV4Result entry in modelOutput)
-                if (modelDictOutput.ContainsKey(entry.Label))
-                    modelDictOutput[entry.Label] += 1;
-                else
-                    modelDictOutput.Add(entry.Label, 1);
-            foreach (KeyValuePair<string, int> entry in modelDictOutput)
-                Console.WriteLine($"    {entry.Value} {entry.Key}(s)");
+            //Console.WriteLine($"\n Objects found in images from folder {Path.GetFullPath(imageFolder)}:");
+            //foreach (YoloV4Result entry in modelOutput)
+            //    if (modelDictOutput.ContainsKey(entry.Label))
+            //        modelDictOutput[entry.Label] += 1;
+            //    else
+            //        modelDictOutput.Add(entry.Label, 1);
+            //foreach (KeyValuePair<string, int> entry in modelDictOutput)
+            //    Console.WriteLine($"    {entry.Value} {entry.Key}(s)");
 
             sw.Stop();
             Console.WriteLine($"\nDone in {sw.ElapsedMilliseconds}ms.");
@@ -72,6 +72,26 @@ namespace YOLOv4MLNet
         {
             using (ObjectContext context = new ObjectContext())
             {
+                // printing database rows to console
+                var query = context.ImageObjects;
+                var sb = new System.Text.StringBuilder();
+                sb.Append(String.Format("{0,3} {1,15} {2,5} {3,5} {4,5} {5,5}\n\n", "Id", "Label", "X", "Y", "Width", "Height"));
+                foreach (var item in query)
+                {
+                    sb.Append(String.Format("{0,3} {1,15} {2,5} {3,5} {4,5} {5,5}\n", item.ImageObjectId, item.Label, item.X, item.Y, item.Width, item.Height));
+                }
+                Console.WriteLine(sb);
+
+                // deleting all database rows if user input is 'y'
+                char input;
+                Console.Write("Do you want to delete recorded objects from Database? (y/n): ");
+                while (((input = Console.ReadLine()[0]) != 'y') && (input != 'n'))
+                    Console.Write("Please enter y or n: ");
+                if (input == 'y')
+                {
+                    context.ImageObjects.RemoveRange(context.ImageObjects);
+                    context.SaveChanges();
+                }
                 
             }
         }
@@ -97,7 +117,11 @@ namespace YOLOv4MLNet
                     foreach (YoloV4Result detectedObject in objectsList)
                     {
                         objectId++;
-                        ImageObject imageObject = new ImageObject { ImageObjectId = objectId, FileName = Path.GetFileName(message), Label = detectedObject.Label };
+                        int x1 = (int)detectedObject.BBox[0];
+                        int y1 = (int)detectedObject.BBox[1];
+                        int x2 = (int)detectedObject.BBox[2];
+                        int y2 = (int)detectedObject.BBox[3];
+                        ImageObject imageObject = new ImageObject { ImageObjectId = objectId, Label = detectedObject.Label, X = x1, Y = y1, Width = x2 - x1, Height = y2 - y1 };
                         context.ImageObjects.Add(imageObject);
                     }
                     context.SaveChanges();
