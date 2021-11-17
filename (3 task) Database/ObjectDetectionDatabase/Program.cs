@@ -5,6 +5,7 @@ using System.Diagnostics;
 using YOLOv4MLNet.DataStructures;
 using Microsoft.EntityFrameworkCore;
 using System.Drawing;
+using System.Linq;
 
 namespace YOLOv4MLNet
 {
@@ -39,7 +40,6 @@ namespace YOLOv4MLNet
         private static readonly Dictionary<string, int> modelDictOutput = new Dictionary<string, int>();
         static int imagesProcessed = 0;
         static Object myLocker = new Object();
-        static int objectId = 0;
 
 
         static void Main()
@@ -92,7 +92,6 @@ namespace YOLOv4MLNet
                     context.ImageObjects.RemoveRange(context.ImageObjects);
                     context.SaveChanges();
                 }
-                
             }
         }
         protected static void MyHandler(object sender, ConsoleCancelEventArgs args)
@@ -100,7 +99,7 @@ namespace YOLOv4MLNet
             Console.WriteLine("\nStopping all threads and exiting program");
             Predictor.cancellationTokenSource.Cancel();
         }
-        public static byte[] ImageToByteArray(System.Drawing.Image imageIn)
+        private static byte[] ImageToByteArray(System.Drawing.Image imageIn)
         {
             using (var ms = new MemoryStream())
             {
@@ -108,6 +107,25 @@ namespace YOLOv4MLNet
 
                 return ms.ToArray();
             }
+        }
+        private static bool DatabaseHasObject(int x, int y, int width, int height, byte[] blob)
+        {
+            bool hasObject = false;
+            using (ObjectContext context = new ObjectContext())
+            {
+                var blobQuery = from item in context.ImageObjects
+                                where item.X == x && item.Y == y && item.Width == width && item.Height == height
+                                select item.ObjectImage;
+                foreach(byte[] blobItem in blobQuery)
+                {
+                    if (blobItem.SequenceEqual(blob))
+                    {
+                        hasObject = true;
+                        break;
+                    }
+                }
+            }
+            return hasObject;
         }
         private static void DisplayMessage(string message, List<YoloV4Result> objectsList)
         {
@@ -125,18 +143,21 @@ namespace YOLOv4MLNet
                 {
                     foreach (YoloV4Result detectedObject in objectsList)
                     {
-                        objectId++;
-                        int x1 = (int)detectedObject.BBox[0];
-                        int y1 = (int)detectedObject.BBox[1];
-                        int x2 = (int)detectedObject.BBox[2];
-                        int y2 = (int)detectedObject.BBox[3];
+
+                        int x = (int)detectedObject.BBox[0];
+                        int y = (int)detectedObject.BBox[1];
+                        int width = (int)detectedObject.BBox[2] - x;
+                        int height = (int)detectedObject.BBox[3] - y;
 
                         Image image = Image.FromFile(message);
                         Bitmap bmpImage = new Bitmap(image);
-                        Bitmap croppedImage = bmpImage.Clone(new Rectangle(x1, y1, x2 - x1, y2 - y1), bmpImage.PixelFormat);
+                        Bitmap croppedImage = bmpImage.Clone(new Rectangle(x, y, width, height), bmpImage.PixelFormat);
                         byte[] blob = ImageToByteArray(croppedImage);
 
-                        ImageObject imageObject = new ImageObject { ImageObjectId = objectId, Label = detectedObject.Label, X = x1, Y = y1, Width = x2 - x1, Height = y2 - y1, ObjectImage = blob };
+                        if (DatabaseHasObject(x, y, width, height, blob))
+                            continue;
+
+                        ImageObject imageObject = new ImageObject { Label = detectedObject.Label, X = x, Y = y, Width = width, Height = height, ObjectImage = blob };
                         context.ImageObjects.Add(imageObject);
                     }
                     context.SaveChanges();
