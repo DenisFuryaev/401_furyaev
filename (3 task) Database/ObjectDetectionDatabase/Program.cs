@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using YOLOv4MLNet.DataStructures;
 using Microsoft.EntityFrameworkCore;
+using System.Drawing;
 
 namespace YOLOv4MLNet
 {
@@ -15,6 +16,7 @@ namespace YOLOv4MLNet
         public int Y { get; set; }
         public int Width { get; set; }
         public int Height { get; set; }
+        public byte[] ObjectImage { get; set; }
     }
 
     class ObjectContext : DbContext
@@ -77,9 +79,7 @@ namespace YOLOv4MLNet
                 var sb = new System.Text.StringBuilder();
                 sb.Append(String.Format("{0,3} {1,15} {2,5} {3,5} {4,5} {5,5}\n\n", "Id", "Label", "X", "Y", "Width", "Height"));
                 foreach (var item in query)
-                {
                     sb.Append(String.Format("{0,3} {1,15} {2,5} {3,5} {4,5} {5,5}\n", item.ImageObjectId, item.Label, item.X, item.Y, item.Width, item.Height));
-                }
                 Console.WriteLine(sb);
 
                 // deleting all database rows if user input is 'y'
@@ -99,6 +99,15 @@ namespace YOLOv4MLNet
         {
             Console.WriteLine("\nStopping all threads and exiting program");
             Predictor.cancellationTokenSource.Cancel();
+        }
+        public static byte[] ImageToByteArray(System.Drawing.Image imageIn)
+        {
+            using (var ms = new MemoryStream())
+            {
+                imageIn.Save(ms, System.Drawing.Imaging.ImageFormat.Gif);
+
+                return ms.ToArray();
+            }
         }
         private static void DisplayMessage(string message, List<YoloV4Result> objectsList)
         {
@@ -121,7 +130,13 @@ namespace YOLOv4MLNet
                         int y1 = (int)detectedObject.BBox[1];
                         int x2 = (int)detectedObject.BBox[2];
                         int y2 = (int)detectedObject.BBox[3];
-                        ImageObject imageObject = new ImageObject { ImageObjectId = objectId, Label = detectedObject.Label, X = x1, Y = y1, Width = x2 - x1, Height = y2 - y1 };
+
+                        Image image = Image.FromFile(message);
+                        Bitmap bmpImage = new Bitmap(image);
+                        Bitmap croppedImage = bmpImage.Clone(new Rectangle(x1, y1, x2 - x1, y2 - y1), bmpImage.PixelFormat);
+                        byte[] blob = ImageToByteArray(croppedImage);
+
+                        ImageObject imageObject = new ImageObject { ImageObjectId = objectId, Label = detectedObject.Label, X = x1, Y = y1, Width = x2 - x1, Height = y2 - y1, ObjectImage = blob };
                         context.ImageObjects.Add(imageObject);
                     }
                     context.SaveChanges();
