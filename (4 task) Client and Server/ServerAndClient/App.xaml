@@ -1,7 +1,7 @@
-﻿<Application x:Class="ObjectDetectionUI.App"
+﻿<Application x:Class="ServerAndClient.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:ObjectDetectionUI"
+             xmlns:local="clr-namespace:ServerAndClient"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
          
