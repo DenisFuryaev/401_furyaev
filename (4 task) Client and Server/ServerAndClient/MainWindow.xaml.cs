@@ -15,6 +15,8 @@ using System.Windows.Media;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Drawing;
+using System.Threading.Tasks;
+using System.Net.Http;
 
 
 namespace ObjectDetectionUI
@@ -40,7 +42,6 @@ namespace ObjectDetectionUI
 
         protected override void OnConfiguring(DbContextOptionsBuilder o) => o.UseSqlite("Data Source=database.db");
     }
-
 
 
     public class ObjectsData : IEnumerable<string>, INotifyCollectionChanged
@@ -111,11 +112,19 @@ namespace ObjectDetectionUI
         }
     }
 
+
     public partial class MainWindow : Window
     {
         public ObservableCollection<string> ProcessedFiles { get; set; }
         public ObjectsData objectsDict;
         private static readonly object myLocker = new object();
+
+        public async Task Foo()
+        {
+            var client = new HttpClient();
+            string result = await client.GetStringAsync("http://localhost:5218/hello?name=World");
+            MessageBox.Show(result);
+        }
 
         public MainWindow()
         {
@@ -129,9 +138,13 @@ namespace ObjectDetectionUI
 
             ProcessedFilesListBox.ItemsSource = ProcessedFiles;
             ObjectsListBox.ItemsSource = objectsDict;
-
-            ConfigureDatabase();
         }
+        private async void WindowContentRendered(object sender, EventArgs e)
+        {
+            ConfigureDatabase();
+            await Foo();
+        }
+
         private void PredictorEventHandler(string filePath, List<YoloV4Result> objectsList)
         {
             lock (myLocker)
@@ -170,6 +183,20 @@ namespace ObjectDetectionUI
         {
             using (ObjectContext context = new ObjectContext())
             {
+                UpdataDatabseListBox();
+                // deleting all database rows if user selected yes button
+                if (MessageBox.Show("Do you want to delete recorded objects from Database?", "Save file", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                {
+                    context.ImageObjects.RemoveRange(context.ImageObjects);
+                    context.SaveChanges();
+                }
+                UpdataDatabseListBox();
+            }
+        }
+        private void UpdataDatabseListBox()
+        {
+            using (ObjectContext context = new ObjectContext())
+            {
                 // printing database rows to console
                 DatabaseListBox.Items.Clear();
                 var query = context.ImageObjects;
@@ -179,14 +206,6 @@ namespace ObjectDetectionUI
                     sb = new System.Text.StringBuilder();
                     sb.Append(String.Format("{0,3} {1,15} {2,5} {3,5} {4,5} {5,5}\n", item.ImageObjectId, item.Label, item.X, item.Y, item.Width, item.Height));
                     DatabaseListBox.Items.Add(sb.ToString());
-                }
-                
-
-                // deleting all database rows if user selected yes button
-                if (MessageBox.Show("Do you want to delete recorded objects from Database?", "Save file", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-                {
-                    context.ImageObjects.RemoveRange(context.ImageObjects);
-                    context.SaveChanges();
                 }
             }
         }
@@ -306,7 +325,7 @@ namespace ObjectDetectionUI
                     {
                         _ = Dispatcher.BeginInvoke(new Action(() => { InfoButton.Background = new SolidColorBrush(Colors.Salmon); InfoButtonTextBlock.Text = "Busy"; }));
                         _ = Predictor.MakePredictions(folderPath);
-                        _ = Dispatcher.BeginInvoke(new Action(() => { InfoButton.Background = new SolidColorBrush(Colors.LightGreen); InfoButtonTextBlock.Text = "Done"; }));
+                        _ = Dispatcher.BeginInvoke(new Action(() => { InfoButton.Background = new SolidColorBrush(Colors.LightGreen); InfoButtonTextBlock.Text = "Done"; UpdataDatabseListBox(); }));
                     }
                     catch (Exception exc)
                     {
